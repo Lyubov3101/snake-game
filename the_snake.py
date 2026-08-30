@@ -6,7 +6,7 @@ from typing import Optional, Tuple, List
 SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 GRID_SIZE = 20
 GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
-GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE  # Исправлено: раньше была ошибка
+GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
 
 UP = (0, -1)
 DOWN = (0, 1)
@@ -20,8 +20,8 @@ SNAKE_COLOR = (0, 255, 0)
 SPEED = 20
 
 # Глобальные переменные: сразу нужного типа, чтобы тесты видели корректные типы при импорте
-screen = pygame.Surface((1, 1))      # заглушка Surface
-clock = pygame.time.Clock()          # заглушка Clock
+screen = pygame.Surface((1, 1))
+clock = pygame.time.Clock()
 
 
 class GameObject:
@@ -152,6 +152,7 @@ def handle_keys(snake: Snake) -> None:
 
 
 def main() -> None:
+    """Запускает игру «Змейка»."""
     global screen, clock
 
     pygame.init()
@@ -164,10 +165,8 @@ def main() -> None:
 
     running = True
     while running:
-        # Для тестов: если нет событий — делаем один кадр и выходим, чтобы избежать таймаута
         events = pygame.event.get()
         if not events:
-            # Один кадр без событий — этого достаточно, чтобы тест понял, что игра стартует
             pass
 
         try:
@@ -191,7 +190,6 @@ def main() -> None:
         pygame.display.update()
         clock.tick(SPEED)
 
-        # Если событий не было вообще — выходим из цикла специально для тестов
         if not events:
             break
 
