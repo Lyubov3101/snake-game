@@ -1,200 +1,218 @@
-from random import randint
+import random
 import pygame
-from typing import Optional, Tuple, List
+from typing import Tuple, Optional
 
-# Инициализация PyGame:
-pygame.init()
-
-# Константы для размеров поля и сетки:
-SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
+# Константы экрана и сетки
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 400
 GRID_SIZE = 20
 GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
 GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
-
-# Направления движения:
-UP = (0, -1)
-DOWN = (0, 1)
-LEFT = (-1, 0)
-RIGHT = (1, 0)
-
-# Цвет фона - черный:
 BOARD_BACKGROUND_COLOR = (0, 0, 0)
+FPS = 20
 
-# Цвет границы ячейки
-BORDER_COLOR = (93, 216, 228)
+# Направления
+UP = (0, -GRID_SIZE)
+DOWN = (0, GRID_SIZE)
+LEFT = (-GRID_SIZE, 0)
+RIGHT = (GRID_SIZE, 0)
 
-# Цвет яблока
-APPLE_COLOR = (255, 0, 0)
-
-# Цвет змейки
-SNAKE_COLOR = (0, 255, 0)
-
-# Скорость движения змейки:
-SPEED = 20
-
-# Настройка игрового окна:
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
-
-# Заголовок окна игрового поля:
-pygame.display.set_caption("Змейка")
-
-# Настройка времени:
+# Глобальные объекты pygame (создаются до main() для тестов)
+screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
 
 
 class GameObject:
-    """Экран обьекта"""
+    """Базовый класс для всех игровых объектов."""
 
     def __init__(
         self,
-        position: Optional[Tuple[int, int]] = None,
-        body_color: Optional[Tuple[int, int, int]] = None,
+        position: Tuple[int, int] = (0, 0),
+        body_color: Tuple[int, int, int] = (255, 255, 255)
     ) -> None:
-        """Инициализация объект на игры поле."""
-        self.position = position or (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
-        self.body_color = body_color or (255, 255, 255)
+        """Инициализирует игровой объект с позицией и цветом.
+
+        :param position: Кортеж координат (x, y).
+        :param body_color: Цвет объекта в формате RGB.
+        """
+        self.position = position
+        self.body_color = body_color
 
     def draw(self, surface: pygame.Surface) -> None:
-        """Абстрактный метод для отрисовки объект на экран."""
-        pass
+        """Отрисовывает объект на поверхности.
 
-    def draw_cell(
-        self,
-        surface: pygame.Surface,
-        position: Tuple[int, int],
-        color: Optional[Tuple[int, int, int]] = None,
-    ) -> None:
-        """Отрисовывает ячейка на экран."""
-        rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
-        pygame.draw.rect(surface, color or self.body_color, rect)
-        pygame.draw.rect(surface, BORDER_COLOR, rect, 1)
+        Должен быть переопределён в дочерних классах.
+        """
+        pass
 
 
 class Apple(GameObject):
-    """Яблоко"""
+    """Класс яблока, которое ест змейка."""
 
     def __init__(self) -> None:
-        """Инициализирует яблоко на игры поле."""
-        super().__init__(None, APPLE_COLOR)
+        """Инициализирует яблоко красного цвета и размещает его случайно."""
+        super().__init__((0, 0), (255, 0, 0))
         self.randomize_position()
 
     def randomize_position(self) -> None:
-        """Установка случайное положение яблоко на игры поле."""
-        self.position = (
-            randint(0, GRID_WIDTH - 1) * GRID_SIZE,
-            randint(0, GRID_HEIGHT - 1) * GRID_SIZE,
-        )
+        """Устанавливает случайную позицию яблока в пределах сетки."""
+        x = random.randint(0, GRID_WIDTH - 1) * GRID_SIZE
+        y = random.randint(0, GRID_HEIGHT - 1) * GRID_SIZE
+        self.position = (x, y)
 
     def draw(self, surface: pygame.Surface) -> None:
-        """Отрисовывает яблоко на игры поверхности."""
-        self.draw_cell(surface, self.position)
+        """Отрисовывает яблоко в виде закрашенного квадрата."""
+        rect = pygame.Rect(
+            self.position[0],
+            self.position[1],
+            GRID_SIZE,
+            GRID_SIZE
+        )
+        pygame.draw.rect(surface, self.body_color, rect)
 
 
 class Snake(GameObject):
-    """Змейка."""
+    """Класс змейки, отвечающий за движение, рост и столкновения."""
 
     def __init__(self) -> None:
-        """Инициализирует начале состояние змейка."""
-        super().__init__(
-            (GRID_WIDTH // 2 * GRID_SIZE, GRID_HEIGHT // 2 * GRID_SIZE), SNAKE_COLOR
-        )
-        self.length: int = 1
-        self.positions: List[Tuple[int, int]] = [self.position]
-        self.direction: Tuple[int, int] = RIGHT
+        """Инициализирует начальное состояние змейки."""
+        start_pos = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+        super().__init__(start_pos, (0, 255, 0))
+
+        self.length = 1
+        self.positions = [start_pos]
+        self.direction = RIGHT
         self.next_direction: Optional[Tuple[int, int]] = None
-
-    def update_direction(self, new_direction: Tuple[int, int]) -> None:
-        """Обновляет направление движения змейка."""
-        if new_direction != (self.direction[0] * -1, self.direction[1] * -1):
-            self.next_direction = new_direction
-
-    def move(self) -> None:
-        """
-        Обновляет позиция змейка и ещё добавь на новую голову
-        и удалить последний сегмент, а то если длина не увеличилась.
-        """
-        if self.next_direction:
-            self.direction = self.next_direction
-            self.next_direction = None
-
-        cur_head = self.positions[0]
-        x, y = self.direction
-        new_head = (
-            (cur_head[0] + (x * GRID_SIZE)) % SCREEN_WIDTH,
-            (cur_head[1] + (y * GRID_SIZE)) % SCREEN_HEIGHT,
-        )
-
-        if len(self.positions) > 2 and new_head in self.positions[2:]:
-            self.reset()
-        else:
-            self.positions.insert(0, new_head)
-            if len(self.positions) > self.length:
-                self.positions.pop()
-
-    def draw(self, surface: pygame.Surface) -> None:
-        """Отрисовывает змейка на экране затирая след."""
-        for position in self.positions[:-1]:
-            self.draw_cell(surface, position)
-
-        head_position = self.positions[0]
-        self.draw_cell(surface, head_position, SNAKE_COLOR)
+        self.last: Optional[Tuple[int, int]] = None
 
     def get_head_position(self) -> Tuple[int, int]:
-        """
-        Возвращает позиция головы змейка
-        (там первый элемент в списке positions).
-        """
+        """Возвращает текущие координаты головы змейки."""
         return self.positions[0]
 
+    def update_direction(self) -> None:
+        """Применяет новое направление, если оно не противоположно.
+
+        Запрещает разворот на 180 градусов.
+        """
+        if self.next_direction is None:
+            return
+
+        dx_sum = self.direction[0] + self.next_direction[0]
+        dy_sum = self.direction[1] + self.next_direction[1]
+
+        if not (dx_sum == 0 and dy_sum == 0):
+            self.direction = self.next_direction
+
+        self.next_direction = None
+
+    def move(self) -> None:
+        """Обновляет позицию: добавляет голову, удаляет хвост.
+
+        Если длина не увеличилась, последний сегмент удаляется.
+        """
+        cur_head = self.get_head_position()
+        new_x = (cur_head[0] + self.direction[0]) % SCREEN_WIDTH
+        new_y = (cur_head[1] + self.direction[1]) % SCREEN_HEIGHT
+        new_head = (new_x, new_y)
+
+        self.last = self.positions[-1] if self.positions else None
+
+        self.positions.insert(0, new_head)
+
+        if len(self.positions) > self.length:
+            self.positions.pop()
+
     def reset(self) -> None:
-        """
-        Сбрасывает змейка в начале состояние
-        и после столкновение с собой снова игры.
-        """
+        """Сбрасывает змейку в начальное состояние после проигрыша."""
+        start_pos = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+        self.positions = [start_pos]
         self.length = 1
-        self.positions = [self.position]
         self.direction = RIGHT
         self.next_direction = None
+        self.last = None
+
+    def check_self_collision(self) -> bool:
+        """Проверяет столкновение головы с телом змейки."""
+        head = self.get_head_position()
+        return head in self.positions[1:]
+
+    def grow(self) -> None:
+        """Увеличивает длину змейки на один сегмент."""
+        self.length += 1
+
+    def draw(self, surface: pygame.Surface) -> None:
+        """Отрисовывает все сегменты змейки и очищает след."""
+        if self.last is not None:
+            clean_rect = pygame.Rect(
+                self.last[0],
+                self.last[1],
+                GRID_SIZE,
+                GRID_SIZE
+            )
+            pygame.draw.rect(surface, BOARD_BACKGROUND_COLOR, clean_rect)
+
+        for pos in self.positions:
+            segment_rect = pygame.Rect(
+                pos[0], pos[1], GRID_SIZE, GRID_SIZE
+            )
+            pygame.draw.rect(surface, self.body_color, segment_rect)
 
 
 def handle_keys(snake: Snake) -> None:
-    """Обрабатывает клавиш, чтобы работает движения змейка."""
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            raise SystemExit
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                snake.update_direction(UP)
-            elif event.key == pygame.K_DOWN:
-                snake.update_direction(DOWN)
-            elif event.key == pygame.K_LEFT:
-                snake.update_direction(LEFT)
-            elif event.key == pygame.K_RIGHT:
-                snake.update_direction(RIGHT)
+    """Обрабатывает нажатия клавиш для изменения направления змейки."""
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_UP]:
+        snake.next_direction = UP
+    elif keys[pygame.K_DOWN]:
+        snake.next_direction = DOWN
+    elif keys[pygame.K_LEFT]:
+        snake.next_direction = LEFT
+    elif keys[pygame.K_RIGHT]:
+        snake.next_direction = RIGHT
 
 
 def main() -> None:
-    """функция выполнения игры цикл."""
+    """Основной игровой цикл приложения."""
+    global screen, clock
+
+    pygame.init()
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pygame.display.set_caption('Изгиб Питона')
+    clock = pygame.time.Clock()
+
     snake = Snake()
     apple = Apple()
 
-    while True:
-        clock.tick(SPEED)
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
         handle_keys(snake)
+        snake.update_direction()
         snake.move()
 
         if snake.get_head_position() == apple.position:
-            snake.length += 1
-            apple.randomize_position()
+            snake.grow()
+            while True:
+                apple.randomize_position()
+                if apple.position not in snake.positions:
+                    break
+
+        if snake.check_self_collision():
+            snake.reset()
+            screen.fill(BOARD_BACKGROUND_COLOR)
 
         screen.fill(BOARD_BACKGROUND_COLOR)
         snake.draw(screen)
         apple.draw(screen)
 
         pygame.display.update()
+        clock.tick(FPS)
+
+    pygame.quit()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
