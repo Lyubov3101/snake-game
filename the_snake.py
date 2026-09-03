@@ -33,7 +33,7 @@ class GameObject:
         self.body_color = body_color
 
     def draw(self, surface: pygame.Surface) -> None:
-        """Отрисовывает объект на поверхности."""
+        """Отрисовывает объект на поверхности. Базовый метод."""
         pass
 
 
@@ -195,7 +195,3 @@ def main() -> None:
         pygame.display.update()
         clock.tick(FPS)
     pygame.quit()
-
-
-if __name__ == '__main__':
-    main()
