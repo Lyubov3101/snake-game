@@ -7,6 +7,7 @@ SCREEN_HEIGHT = 400
 GRID_SIZE = 20
 GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
 GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
+
 BOARD_BACKGROUND_COLOR = (0, 0, 0)
 BORDER_COLOR = (93, 216, 228)
 FPS = 20
@@ -33,7 +34,7 @@ class GameObject:
         self.body_color = body_color
 
     def draw(self, surface: pygame.Surface) -> None:
-        """Отрисовывает объект на поверхности. Базовый метод."""
+        """Отрисовывает объект на поверхности."""
         pass
 
 
@@ -87,7 +88,7 @@ class Snake(GameObject):
         self,
         direction: Tuple[int, int]
     ) -> None:
-        """Устанавливает направление. Разворот на 180 запрещён."""
+        """Устанавливает направление. Разворот запрещён."""
         dx_sum = self.direction[0] + direction[0]
         dy_sum = self.direction[1] + direction[1]
         if not (dx_sum == 0 and dy_sum == 0):
@@ -103,12 +104,8 @@ class Snake(GameObject):
     def move(self) -> None:
         """Делает шаг: двигает голову, убирает хвост."""
         cur_head = self.get_head_position()
-        new_x = (
-            (cur_head[0] + self.direction[0]) % SCREEN_WIDTH
-        )
-        new_y = (
-            (cur_head[1] + self.direction[1]) % SCREEN_HEIGHT
-        )
+        new_x = (cur_head[0] + self.direction[0]) % SCREEN_WIDTH
+        new_y = (cur_head[1] + self.direction[1]) % SCREEN_HEIGHT
         new_head = (new_x, new_y)
         self.last = self.positions[-1] if self.positions else None
         self.positions.insert(0, new_head)
@@ -150,7 +147,7 @@ class Snake(GameObject):
 
 
 def handle_keys(snake: Snake) -> None:
-    """Обработка нажатий клавиш для управления змейкой."""
+    """Обработка нажатий клавиш для управления."""
     keys = pygame.key.get_pressed()
     if keys[pygame.K_UP]:
         snake.set_direction(UP)
@@ -164,13 +161,12 @@ def handle_keys(snake: Snake) -> None:
 
 def main() -> None:
     """Основной игровой цикл."""
-    global screen, clock
     pygame.init()
+    global screen
     screen = pygame.display.set_mode(
         (SCREEN_WIDTH, SCREEN_HEIGHT)
     )
     pygame.display.set_caption('Изгиб Питона')
-    clock = pygame.time.Clock()
     snake = Snake()
     apple = Apple()
     running = True
@@ -195,3 +191,7 @@ def main() -> None:
         pygame.display.update()
         clock.tick(FPS)
     pygame.quit()
+
+
+if __name__ == '__main__':
+    main()
