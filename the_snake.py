@@ -1,6 +1,7 @@
 import random
+from typing import List, Tuple
+
 import pygame
-from typing import Tuple, List
 
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 400
@@ -16,9 +17,6 @@ DOWN = (0, GRID_SIZE)
 LEFT = (-GRID_SIZE, 0)
 RIGHT = (GRID_SIZE, 0)
 
-screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-clock = pygame.time.Clock()
-
 
 class GameObject:
     """Базовый класс для всех игровых объектов."""
@@ -26,7 +24,7 @@ class GameObject:
     def __init__(
         self,
         position: Tuple[int, int] = (0, 0),
-        body_color: Tuple[int, int, int] = (255, 255, 255)
+        body_color: Tuple[int, int, int] = (255, 255, 255),
     ) -> None:
         """Инициализирует объект позицией и цветом."""
         self.position = position
@@ -47,10 +45,15 @@ class Apple(GameObject):
 
     def randomize_position(self) -> None:
         """Устанавливает случайную позицию яблока в пределах поля."""
-        self.position = (
-            random.randrange(0, GRID_WIDTH) * GRID_SIZE,
-            random.randrange(0, GRID_HEIGHT) * GRID_SIZE,
-        )
+        while True:
+            position = (
+                random.randrange(0, GRID_WIDTH) * GRID_SIZE,
+                random.randrange(0, GRID_HEIGHT) * GRID_SIZE,
+            )
+            # Чтобы яблоко не появлялось прямо на змее
+            if position not in snake.positions:
+                self.position = position
+                break
 
     def draw(self, surface: pygame.Surface) -> None:
         """Отрисовывает яблоко как цветной квадрат."""
@@ -92,6 +95,23 @@ class Snake(GameObject):
             head[0] + self.direction[0],
             head[1] + self.direction[1],
         )
+
+        # --- ТЕЛЕПОРТАЦИЯ ЧЕРЕЗ КРАЯ (Вариант А) ---
+        # Если вышли за правый край — появляемся слева
+        if new_head[0] >= SCREEN_WIDTH:
+            new_head = (0, new_head[1])
+        # Если ушли за левый край — появляемся справа
+        elif new_head[0] < 0:
+            new_head = (SCREEN_WIDTH - GRID_SIZE, new_head[1])
+
+        # Если ушли вниз — появляемся сверху
+        if new_head[1] >= SCREEN_HEIGHT:
+            new_head = (new_head[0], 0)
+        # Если ушли вверх — появляемся снизу
+        elif new_head[1] < 0:
+            new_head = (new_head[0], SCREEN_HEIGHT - GRID_SIZE)
+        # -----------------------------------------
+
         self.positions.insert(0, new_head)
         self.positions.pop()
         self.position = self.positions[0]
@@ -114,14 +134,7 @@ class Snake(GameObject):
         head = self.get_head_position()
         return head in self.positions[1:]
 
-    def update_direction(self) -> None:
-        """Заглушка."""
-        pass
-
-    def set_direction(
-        self,
-        direction: Tuple[int, int]
-    ) -> None:
+    def set_direction(self, direction: Tuple[int, int]) -> None:
         """Устанавливает направление, если оно не противоположно текущему."""
         opposite = (-self.direction[0], -self.direction[1])
         if direction != opposite:
@@ -134,7 +147,12 @@ class Snake(GameObject):
             pygame.draw.rect(surface, self._body_color, rect)
 
 
-def handle_keys(snake: Snake) -> None:
+# Глобальные экземпляры, чтобы яблоко могло проверять столкновения
+snake = Snake()
+apple = Apple()
+
+
+def handle_keys() -> None:
     """Обрабатывает нажатия клавиш и меняет направление змеи."""
     keys = pygame.key.get_pressed()
     if keys[pygame.K_UP]:
@@ -149,13 +167,12 @@ def handle_keys(snake: Snake) -> None:
 
 def main() -> None:
     """Запускает игровой цикл."""
-    global screen
+    global snake, apple
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption('Изгиб Питона')
+    pygame.display.set_caption("Изгиб Питона")
 
-    snake = Snake()
-    apple = Apple()
+    clock = pygame.time.Clock()
     running = True
 
     while running:
@@ -163,16 +180,12 @@ def main() -> None:
             if event.type == pygame.QUIT:
                 running = False
 
-        handle_keys(snake)
-        snake.update_direction()
+        handle_keys()
         snake.move()
 
         if snake.get_head_position() == apple.position:
             snake.grow()
-            while True:
-                apple.randomize_position()
-                if apple.position not in snake.positions:
-                    break
+            apple.randomize_position()
 
         if snake.check_self_collision():
             snake.reset()
@@ -187,5 +200,5 @@ def main() -> None:
     pygame.quit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
