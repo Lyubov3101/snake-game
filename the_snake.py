@@ -166,7 +166,7 @@ def handle_keys() -> None:
 
 def main() -> None:
     """Запускает игровой цикл."""
-    pygame.display.set_caption("Изгиб Питона")
+    pygame.display.set_caption('Изгиб Питона')
     running = True
 
     while running:
@@ -194,5 +194,5 @@ def main() -> None:
     pygame.quit()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
